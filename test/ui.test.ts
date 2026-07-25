@@ -81,14 +81,15 @@ describe('GameScreen (hotseat)', () => {
     }
     expect(session.state.pendingTokens).toHaveLength(0)
 
+    const startingSeat = session.state.turn
     const end = [...target.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
       b.textContent!.includes('end turn'),
     )!
     expect(end.disabled).toBe(false)
     end.click()
     flushSync()
-    expect(session.state.turn).toBe(1)
-    expect(screenText(target)).toContain('Bo')
+    expect(session.state.turn).toBe((startingSeat + 1) % 2)
+    expect(screenText(target)).toContain(session.names[session.state.turn])
 
     unmount(app)
     target.remove()
