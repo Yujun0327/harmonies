@@ -109,9 +109,10 @@
   }
   .seats li {
     padding: 0.5rem 0.7rem;
-    border: 1px solid #b8ad94;
-    border-radius: 6px;
-    background: #f7f2e5;
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    background: var(--panel);
+    box-shadow: var(--shadow);
   }
   .me {
     border-width: 2px;
@@ -125,35 +126,28 @@
     border-style: dashed !important;
   }
   .tag {
-    font-size: 0.7rem;
+    font-family: var(--font-ui);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
     margin-left: 0.4rem;
-    padding: 0.1rem 0.35rem;
+    padding: 0.12rem 0.4rem;
     border-radius: 3px;
-    background: #d8d0ba;
+    background: var(--paper-deep);
+    color: var(--ink-soft);
   }
   .tag.ready {
-    background: #5b7a3a;
-    color: #fff;
+    background: var(--moss);
+    color: var(--panel);
   }
   .controls {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--sp-2);
   }
   input {
     flex: 1;
-    padding: 0.45rem;
-    font: inherit;
     min-width: 0;
   }
-  button {
-    padding: 0.5rem 0.8rem;
-    font: inherit;
-    cursor: pointer;
-  }
   .quiet {
-    background: none;
-    border: none;
-    opacity: 0.7;
     align-self: flex-start;
   }
 </style>

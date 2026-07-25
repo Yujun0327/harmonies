@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { BaseSession, OnlineSession } from '../app/session.svelte'
   import { scores } from '../app/session.svelte'
-  import type { HexId, Move, TokenColor } from '../engine'
+  import type { HexId, Move } from '../engine'
   import { play } from './audio'
   import Board from './Board.svelte'
   import CardPlate from './CardPlate.svelte'
+  import TokenChip from './TokenChip.svelte'
   import VictoryOverlay from './VictoryOverlay.svelte'
 
   interface Props {
@@ -15,24 +16,13 @@
 
   const { session, onExit, onRematch }: Props = $props()
 
-  const TOKEN_COLOR: Record<TokenColor, string> = {
-    gray: '#8d94a1',
-    blue: '#5b8fd6',
-    brown: '#8a5a33',
-    green: '#4e8f4a',
-    yellow: '#d9b23e',
-    red: '#c05040',
-  }
-
   const gs = $derived(session.state)
   const moves = $derived(session.myMoves())
   const online = $derived(session.mode === 'online' ? (session as OnlineSession) : null)
 
   /** The seat whose board fills the main panel. */
   const focusSeat = $derived(session.mySeat ?? session.actor)
-  const others = $derived(
-    gs.players.map((_, i) => i).filter((i) => i !== focusSeat),
-  )
+  const others = $derived(gs.players.map((_, i) => i).filter((i) => i !== focusSeat))
 
   type Sel = { kind: 'pending'; index: number } | { kind: 'card'; cardId: string } | null
   let sel = $state<Sel>(null)
@@ -66,14 +56,23 @@
 
   const canDiscardSelected = $derived(
     sel?.kind === 'pending' &&
-      moves.some((m) => m.type === 'placeToken' && m.index === (sel as { index: number }).index && m.hex === null),
+      moves.some(
+        (m) =>
+          m.type === 'placeToken' &&
+          m.index === (sel as { index: number }).index &&
+          m.hex === null,
+      ),
   )
 
   const takeableSlots = $derived(
-    new Set(moves.filter((m) => m.type === 'takeSlot').map((m) => (m as Move & { type: 'takeSlot' }).slot)),
+    new Set(
+      moves.filter((m) => m.type === 'takeSlot').map((m) => (m as Move & { type: 'takeSlot' }).slot),
+    ),
   )
   const takeableRows = $derived(
-    new Set(moves.filter((m) => m.type === 'takeCard').map((m) => (m as Move & { type: 'takeCard' }).row)),
+    new Set(
+      moves.filter((m) => m.type === 'takeCard').map((m) => (m as Move & { type: 'takeCard' }).row),
+    ),
   )
   const canEndTurn = $derived(moves.some((m) => m.type === 'endTurn'))
 
@@ -110,20 +109,27 @@
     <button class="quiet" onclick={onExit}>← leave</button>
     <div class="turn-line">
       {#if gs.result}
-        game over
+        <span class="label">game over</span>
       {:else if session.myTurn}
-        <strong>your turn</strong> — {session.names[session.actor]}
+        <strong
+          >{session.mode === 'hotseat'
+            ? `${session.names[session.actor]} to play`
+            : 'your turn'}</strong
+        >
       {:else}
-        waiting on {session.names[session.actor]}
-        {#if online?.waitingOn}(disconnected){/if}
+        <span class="waiting">waiting on {session.names[session.actor]}…</span>
+        {#if online?.waitingOn}<span class="label">disconnected</span>{/if}
       {/if}
       {#if gs.endTriggered && !gs.result}
         <span class="final">final round</span>
       {/if}
     </div>
-    <div class="scores">
+    <div class="scores tnum">
       {#each session.names as name, i (i)}
-        <span class:active={i === gs.turn}>{name}: {totals[i]}</span>
+        <span class="score" class:active={i === gs.turn}>
+          <span class="score-name">{name}</span>
+          <span class="score-value">{totals[i]}</span>
+        </span>
       {/each}
     </div>
   </header>
@@ -133,63 +139,71 @@
       {#if others.length > 0}
         <div class="others">
           {#each others as seat (seat)}
-            <div class="mini">
-              <span class="mini-name">{session.names[seat]}</span>
+            <div class="mini panel">
+              <span class="label">{session.names[seat]}</span>
               <Board player={gs.players[seat]} compact />
             </div>
           {/each}
         </div>
       {/if}
 
-      <div class="my-board">
-        <Board player={gs.players[focusSeat]} highlights={highlights} {onHexClick} />
-      </div>
-
-      <div class="tray">
-        {#if gs.pendingTokens.length > 0 && session.myTurn}
-          <span class="tray-label">place:</span>
-          {#each gs.pendingTokens as token, i (i)}
-            <button
-              class="token"
-              class:selected={sel?.kind === 'pending' && sel.index === i}
-              style:background={TOKEN_COLOR[token]}
-              onclick={() => (sel = { kind: 'pending', index: i })}
-              aria-label={`pending ${token} token`}
-            ></button>
-          {/each}
-          {#if canDiscardSelected}
-            <button class="quiet" onclick={discardSelected}>discard (no legal spot)</button>
+      <div class="my-board panel">
+        <Board player={gs.players[focusSeat]} {highlights} {onHexClick} />
+        <div class="tray">
+          {#if gs.pendingTokens.length > 0 && session.myTurn}
+            <span class="label">place</span>
+            {#each gs.pendingTokens as token, i (i)}
+              <button
+                class="tray-chip"
+                onclick={() => (sel = { kind: 'pending', index: i })}
+                aria-label={`pending ${token} token`}
+              >
+                <TokenChip
+                  color={token}
+                  px={34}
+                  selected={sel?.kind === 'pending' && sel.index === i}
+                />
+              </button>
+            {/each}
+            {#if canDiscardSelected}
+              <button class="quiet" onclick={discardSelected}>discard — no legal spot</button>
+            {/if}
           {/if}
-        {/if}
-        <span class="spacer"></span>
-        <button class="end" disabled={!canEndTurn} onclick={() => session.submit({ type: 'endTurn' })}>
-          end turn
-        </button>
+          <span class="spacer"></span>
+          <button
+            class="primary"
+            disabled={!canEndTurn}
+            onclick={() => session.submit({ type: 'endTurn' })}
+          >
+            end turn
+          </button>
+        </div>
       </div>
     </section>
 
     <aside>
-      <section class="clearing">
-        <h3>the clearing</h3>
+      <section class="clearing panel">
+        <h3 class="label">the clearing</h3>
         <div class="slots">
           {#each gs.slots as slot, i (i)}
             <button
               class="slot"
               disabled={!takeableSlots.has(i)}
               onclick={() => session.submit({ type: 'takeSlot', slot: i })}
+              aria-label={`token slot ${i + 1}`}
             >
               {#each slot as token, j (j)}
-                <span class="token small" style:background={TOKEN_COLOR[token]}></span>
+                <TokenChip color={token} px={26} />
               {/each}
-              {#if slot.length === 0}<span class="empty">—</span>{/if}
+              {#if slot.length === 0}<span class="empty-slot">emptied</span>{/if}
             </button>
           {/each}
         </div>
-        <div class="bag-line">{gs.bag.length - gs.bagCursor} tokens in the bag</div>
+        <div class="bag-line tnum">{gs.bag.length - gs.bagCursor} tokens left in the bag</div>
       </section>
 
       <section class="card-row">
-        <h3>animals</h3>
+        <h3 class="label">animals seeking a home</h3>
         <div class="cards">
           {#each gs.cardRow as cardId, row (row)}
             {#if cardId}
@@ -206,7 +220,7 @@
       </section>
 
       <section class="my-cards">
-        <h3>my cards ({gs.players[focusSeat].inProgress.length}/4)</h3>
+        <h3 class="label">my cards ({gs.players[focusSeat].inProgress.length}/4)</h3>
         <div class="cards">
           {#each gs.players[focusSeat].inProgress as ip (ip.cardId)}
             <CardPlate
@@ -214,12 +228,19 @@
               cubesPlaced={ip.cubesPlaced}
               clickable={session.myTurn}
               selected={sel?.kind === 'card' && sel.cardId === ip.cardId}
-              onclick={() => (sel = sel?.kind === 'card' && sel.cardId === ip.cardId ? null : { kind: 'card', cardId: ip.cardId })}
+              onclick={() =>
+                (sel =
+                  sel?.kind === 'card' && sel.cardId === ip.cardId
+                    ? null
+                    : { kind: 'card', cardId: ip.cardId })}
             />
           {/each}
           {#each gs.players[focusSeat].completed as id (id)}
             <div class="done-card"><CardPlate cardId={id} cubesPlaced={99} /></div>
           {/each}
+          {#if gs.players[focusSeat].inProgress.length === 0 && gs.players[focusSeat].completed.length === 0}
+            <p class="empty-note">no cards yet — draft an animal from the row above</p>
+          {/if}
         </div>
       </section>
     </aside>
@@ -232,133 +253,161 @@
 
 <style>
   .screen {
-    max-width: 1180px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 0.75rem;
+    padding: var(--sp-3) var(--sp-4) var(--sp-5);
   }
   header {
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding-bottom: 0.5rem;
+    align-items: baseline;
+    gap: var(--sp-4);
+    padding: var(--sp-2) 0 var(--sp-3);
   }
   .turn-line {
     flex: 1;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+  }
+  .waiting {
+    color: var(--ink-soft);
+    font-style: italic;
   }
   .final {
-    margin-left: 0.75rem;
-    color: #a04030;
-    font-weight: 700;
+    margin-left: var(--sp-3);
+    color: var(--rust);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
   .scores {
     display: flex;
-    gap: 0.9rem;
-    font-size: 0.85rem;
+    gap: var(--sp-3);
   }
-  .scores .active {
-    font-weight: 700;
-    text-decoration: underline;
+  .score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.15rem 0.55rem;
+    border: 1px solid transparent;
+    border-radius: var(--r-card);
+  }
+  .score.active {
+    border-color: var(--line);
+    background: var(--panel);
+  }
+  .score-name {
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+  }
+  .score-value {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 640;
   }
   .table {
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
-    gap: 1rem;
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr);
+    gap: var(--sp-4);
+    align-items: start;
   }
-  @media (max-width: 900px) {
+  @media (max-width: 940px) {
     .table {
       grid-template-columns: 1fr;
     }
   }
   .others {
     display: flex;
-    gap: 0.75rem;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-3);
   }
   .mini {
-    width: 130px;
+    width: 118px;
+    padding: var(--sp-2);
   }
-  .mini-name {
-    font-size: 0.75rem;
+  .my-board {
+    padding: var(--sp-3);
+  }
+  .my-board :global(svg.board) {
+    max-width: 470px;
+    margin: 0 auto;
   }
   .tray {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    min-height: 2.6rem;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+    min-height: 3rem;
+    border-top: 1px solid var(--line);
+    padding-top: var(--sp-2);
   }
-  .tray-label {
-    font-size: 0.85rem;
+  .tray-chip {
+    background: none;
+    border: none;
+    padding: 0.15rem;
+    cursor: pointer;
   }
   .spacer {
     flex: 1;
   }
-  .token {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    border: 2px solid #00000044;
-    cursor: pointer;
-  }
-  .token.selected {
-    outline: 3px solid #333;
-  }
-  .token.small {
-    width: 1.3rem;
-    height: 1.3rem;
-    display: inline-block;
-    cursor: inherit;
-  }
   .slots {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: var(--sp-2);
   }
   .slot {
     display: flex;
-    gap: 0.4rem;
+    gap: var(--sp-2);
     align-items: center;
-    padding: 0.35rem 0.5rem;
-    border: 1px solid #b8ad94;
-    border-radius: 6px;
-    background: #f7f2e5;
-    min-height: 2.2rem;
+    justify-content: center;
+    padding: 0.4rem 0.5rem;
+    background: var(--paper-deep);
+    min-height: 2.6rem;
   }
   .slot:not(:disabled) {
-    cursor: pointer;
-    border-color: #5b7a3a;
+    border-color: var(--moss);
     border-width: 2px;
   }
+  .empty-slot {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
   .bag-line {
-    font-size: 0.78rem;
-    margin-top: 0.35rem;
-    opacity: 0.8;
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    margin-top: var(--sp-2);
+    color: var(--ink-soft);
+  }
+  .clearing {
+    padding: var(--sp-3);
   }
   .cards {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: var(--sp-2);
   }
   .gap {
-    width: 6.5rem;
-    border: 1px dashed #b8ad94;
-    border-radius: 6px;
+    width: 7.1rem;
+    border: 1px dashed var(--line);
+    border-radius: var(--r-card);
+    min-height: 6rem;
   }
   .done-card {
-    opacity: 0.6;
+    opacity: 0.55;
   }
-  h3 {
-    margin: 0.6rem 0 0.35rem;
+  .empty-note {
     font-size: 0.85rem;
-    text-transform: lowercase;
+    font-style: italic;
+    color: var(--ink-soft);
   }
-  .end {
-    padding: 0.45rem 1rem;
+  h3.label {
+    margin: var(--sp-4) 0 var(--sp-2);
   }
-  .quiet {
-    background: none;
-    border: none;
-    cursor: pointer;
-    opacity: 0.75;
-    font: inherit;
+  .clearing h3.label {
+    margin-top: 0;
   }
 </style>

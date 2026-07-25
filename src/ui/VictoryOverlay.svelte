@@ -70,16 +70,22 @@
   th {
     padding: 0.3rem 0.7rem;
     text-align: right;
-    border-bottom: 1px solid #00000018;
+    border-bottom: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
   }
   td:first-child {
     text-align: left;
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
   }
   .total td {
     font-weight: 700;
+    font-family: var(--font-display);
   }
   .winner {
-    color: #5b7a3a;
+    color: var(--moss);
     font-weight: 700;
   }
   .actions {

@@ -32,8 +32,11 @@
 </script>
 
 <main>
-  <h1>Harmonies</h1>
-  <p class="tagline">build a little landscape, welcome its animals</p>
+  <div class="plate-head">
+    <span class="ornament" aria-hidden="true">❦</span>
+    <h1>Harmonies</h1>
+    <p class="tagline">a field guide to little landscapes &amp; the animals who love them</p>
+  </div>
   <p class="disclaimer">
     A fan-made homage for playing among friends. Not affiliated with Libellud.
     If you enjoy it, buy the real board game.
@@ -85,44 +88,54 @@
 
 <style>
   main {
-    max-width: 26rem;
-    margin: 8vh auto 0;
-    padding: 1rem;
+    max-width: 24rem;
+    margin: 9vh auto 0;
+    padding: var(--sp-4);
     text-align: center;
   }
+  .plate-head {
+    border-top: 2px solid var(--ink);
+    border-bottom: 1px solid var(--line);
+    padding: var(--sp-3) 0 var(--sp-3);
+    margin-bottom: var(--sp-2);
+  }
+  .ornament {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin-bottom: var(--sp-1);
+  }
+  h1 {
+    font-size: 2.6rem;
+    margin-bottom: 0.1rem;
+  }
   .tagline {
-    opacity: 0.8;
+    font-style: italic;
+    color: var(--ink-soft);
+    margin: 0;
   }
   .disclaimer {
     font-size: 0.75rem;
-    opacity: 0.6;
-    margin-bottom: 2rem;
+    color: var(--ink-soft);
+    margin-bottom: var(--sp-6);
   }
   .menu {
     display: flex;
     flex-direction: column;
-    gap: 0.7rem;
+    gap: var(--sp-3);
+  }
+  .menu > button {
+    padding: 0.65rem;
   }
   label {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.85rem;
+    gap: var(--sp-1);
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: lowercase;
+    color: var(--ink-soft);
     text-align: left;
-  }
-  input,
-  select {
-    padding: 0.5rem;
-    font: inherit;
-  }
-  button {
-    padding: 0.6rem;
-    font: inherit;
-    cursor: pointer;
-  }
-  .quiet {
-    background: none;
-    border: none;
-    opacity: 0.7;
   }
 </style>

@@ -97,6 +97,7 @@ describe('GameScreen (hotseat)', () => {
 
   it('drafts an animal card through the DOM', () => {
     const { session, target, app } = mountGame()
+    const seat = session.state.turn
     ;[...target.querySelectorAll<HTMLButtonElement>('.clearing .slot')][0].click()
     flushSync()
 
@@ -106,7 +107,7 @@ describe('GameScreen (hotseat)', () => {
     expect(clickable).toHaveLength(5)
     clickable[0].click()
     flushSync()
-    expect(session.state.players[0].inProgress).toHaveLength(1)
+    expect(session.state.players[seat].inProgress).toHaveLength(1)
     expect(screenText(target)).toContain('my cards (1/4)')
 
     unmount(app)

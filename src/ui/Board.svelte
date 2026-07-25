@@ -1,7 +1,9 @@
 <script lang="ts">
   import { SIDE_A } from '../data'
   import { hexToPixel, parseHex } from '../engine'
-  import type { HexId, PlayerState } from '../engine'
+  import type { HexId, PlayerState, TokenColor } from '../engine'
+  import TokenStack from './TokenStack.svelte'
+  import { wobblyHex } from './wobble'
 
   interface Props {
     player: PlayerState
@@ -15,44 +17,34 @@
 
   const { player, size = 34, highlights = new Set(), onHexClick, compact = false }: Props = $props()
 
-  const COLOR: Record<string, string> = {
-    gray: '#8d94a1',
-    blue: '#5b8fd6',
-    brown: '#8a5a33',
-    green: '#4e8f4a',
-    yellow: '#d9b23e',
-    red: '#c05040',
-  }
-
   const geo = $derived.by(() => {
     const centers = SIDE_A.map((id) => {
       const [q, r] = parseHex(id)
       return { id, ...hexToPixel(q, r, size) }
     })
-    const pad = size * 1.4
+    const pad = size * 1.5
     const minX = Math.min(...centers.map((c) => c.x)) - pad
     const minY = Math.min(...centers.map((c) => c.y)) - pad
     const w = Math.max(...centers.map((c) => c.x)) - minX + pad
-    const h = Math.max(...centers.map((c) => c.y)) - minY + pad
+    const h = Math.max(...centers.map((c) => c.y)) - minY + pad * 1.15
     return { centers, minX, minY, w, h }
   })
 
-  function hexPoints(cx: number, cy: number): string {
-    // flat-top hexagon
-    return Array.from({ length: 6 }, (_, i) => {
-      const a = (Math.PI / 3) * i
-      return `${cx + size * Math.cos(a)},${cy + size * Math.sin(a)}`
-    }).join(' ')
-  }
-
-  const lift = $derived(size * 0.22) // vertical offset per stacked token
+  /** Sort so taller/lower stacks paint over the cells behind them. */
+  const drawOrder = $derived([...geo.centers].sort((a, b) => a.y - b.y))
 </script>
 
-<svg viewBox="{geo.minX} {geo.minY} {geo.w} {geo.h}" class="board" class:compact role="img" aria-label="personal board">
+<svg
+  viewBox="{geo.minX} {geo.minY} {geo.w} {geo.h}"
+  class="board"
+  class:compact
+  role="img"
+  aria-label="personal board"
+>
+  <!-- ground pass: every cell outline -->
   {#each geo.centers as c (c.id)}
-    {@const stack = player.board[c.id] ?? []}
-    {@const cube = player.cubes[c.id]}
     {@const hot = highlights.has(c.id)}
+    {@const empty = (player.board[c.id]?.length ?? 0) === 0}
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <g
       class="hex"
@@ -62,31 +54,21 @@
       role={hot && onHexClick ? 'button' : undefined}
       tabindex={hot && onHexClick ? 0 : undefined}
     >
-      <polygon
-        points={hexPoints(c.x, c.y)}
-        class="cell"
-        class:hot
-      />
-      {#each stack as token, i (i)}
-        <circle
-          cx={c.x}
-          cy={c.y - i * lift}
-          r={size * 0.62}
-          fill={COLOR[token]}
-          stroke="#00000055"
-          stroke-width="1.5"
-        />
-      {/each}
-      {#if cube}
-        <rect
-          x={c.x - size * 0.2}
-          y={c.y - (stack.length - 1) * lift - size * 0.2 - size * 0.5}
-          width={size * 0.4}
-          height={size * 0.4}
-          class="cube"
-        />
+      <path d={wobblyHex(c.x, c.y, size * 0.94, size * 0.055)} class="cell" class:hot />
+      {#if empty && !hot}
+        <circle cx={c.x} cy={c.y} r={size * 0.05} class="dot" />
       {/if}
     </g>
+  {/each}
+
+  <!-- token pass: stacks painted back-to-front so lifts overlap naturally -->
+  {#each drawOrder as c (c.id)}
+    {@const stack = player.board[c.id] as TokenColor[] | undefined}
+    {#if stack && stack.length > 0}
+      <g class="stack-layer">
+        <TokenStack {stack} {size} cx={c.x} cy={c.y} hasCube={player.cubes[c.id] !== undefined} animate={!compact} />
+      </g>
+    {/if}
   {/each}
 </svg>
 
@@ -97,23 +79,27 @@
     height: auto;
   }
   .cell {
-    fill: #efe9da;
-    stroke: #b8ad94;
-    stroke-width: 1.5;
+    fill: var(--paper-deep);
+    stroke: var(--line);
+    stroke-width: 1.4;
+    stroke-linejoin: round;
   }
   .hot {
-    fill: #d8e6c3;
-    stroke: #5b7a3a;
-    stroke-width: 3;
+    fill: rgb(91 122 58 / 0.16);
+    stroke: var(--moss);
+    stroke-width: 2;
   }
   .clickable {
     cursor: pointer;
   }
-  .cube {
-    fill: #f5f0e4;
-    stroke: #4a4436;
-    stroke-width: 1.5;
-    rx: 2;
+  .clickable:hover .cell {
+    fill: rgb(91 122 58 / 0.28);
+  }
+  .dot {
+    fill: var(--line);
+  }
+  .stack-layer {
+    pointer-events: none;
   }
   .compact .cell {
     stroke-width: 1;
