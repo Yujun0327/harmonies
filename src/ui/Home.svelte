@@ -1,5 +1,6 @@
 <script lang="ts">
   import { loadPlayerName, savePlayerName } from '../app/persist'
+  import RulesLeaflet from './RulesLeaflet.svelte'
 
   interface Props {
     onHotseat: (playerCount: 2 | 3 | 4, names: string[]) => void
@@ -14,6 +15,7 @@
   let names = $state(['', '', '', ''])
   let joinCode = $state('')
   let myName = $state(loadPlayerName())
+  let showRules = $state(false)
 
   function startHotseat() {
     onHotseat(playerCount, names.slice(0, playerCount))
@@ -51,6 +53,7 @@
       <button onclick={createRoom}>create online room</button>
       <button onclick={() => (mode = 'join')}>join a room</button>
       <button onclick={() => (mode = 'hotseat')}>hotseat (one device)</button>
+      <button class="quiet" onclick={() => (showRules = true)}>how to play</button>
     </div>
   {:else if mode === 'join'}
     <div class="menu">
@@ -83,6 +86,10 @@
       <button onclick={startHotseat}>start</button>
       <button class="quiet" onclick={() => (mode = 'menu')}>back</button>
     </div>
+  {/if}
+
+  {#if showRules}
+    <RulesLeaflet onClose={() => (showRules = false)} />
   {/if}
 </main>
 

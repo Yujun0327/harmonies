@@ -5,6 +5,8 @@
   import { play } from './audio'
   import Board from './Board.svelte'
   import CardPlate from './CardPlate.svelte'
+  import RulesLeaflet from './RulesLeaflet.svelte'
+  import ScoreSheet from './ScoreSheet.svelte'
   import TokenChip from './TokenChip.svelte'
   import VictoryOverlay from './VictoryOverlay.svelte'
 
@@ -102,6 +104,9 @@
   })
 
   const totals = $derived(scores(gs))
+
+  let showTally = $state(false)
+  let showRules = $state(false)
 </script>
 
 <div class="screen">
@@ -131,6 +136,10 @@
           <span class="score-value">{totals[i]}</span>
         </span>
       {/each}
+    </div>
+    <div class="header-actions">
+      <button class="quiet" onclick={() => (showTally = true)}>tally</button>
+      <button class="quiet" onclick={() => (showRules = true)}>rules</button>
     </div>
   </header>
 
@@ -246,6 +255,12 @@
     </aside>
   </div>
 
+  {#if showTally && !gs.result}
+    <ScoreSheet {session} onClose={() => (showTally = false)} />
+  {/if}
+  {#if showRules}
+    <RulesLeaflet onClose={() => (showRules = false)} />
+  {/if}
   {#if gs.result}
     <VictoryOverlay {session} {onRematch} {onExit} />
   {/if}
@@ -262,6 +277,11 @@
     align-items: baseline;
     gap: var(--sp-4);
     padding: var(--sp-2) 0 var(--sp-3);
+    flex-wrap: wrap;
+  }
+  .header-actions {
+    display: flex;
+    gap: var(--sp-1);
   }
   .turn-line {
     flex: 1;
