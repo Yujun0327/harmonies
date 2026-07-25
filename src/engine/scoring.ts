@@ -75,7 +75,14 @@ export function scoreBuildings(player: PlayerState): number {
 
 const RIVER_POINTS = [0, 0, 2, 5, 8, 11, 15]
 
-/** S6.5 — only the single longest blue chain scores (RL-4: longest simple path). */
+/**
+ * S6.5 — only the single longest blue chain scores (RL-4: longest simple
+ * path). Longest-path is exponential in the worst case, so the DFS is
+ * branch-and-bound pruned: stop when the whole component is already in a
+ * path, and cut any branch whose reachable remainder can't beat the best.
+ * Dense blue blobs (the worst case) almost always have a full-cover path,
+ * so the early exit fires immediately there.
+ */
 export function scoreWater(player: PlayerState): number {
   const blues = new Set<HexId>(
     Object.entries(player.board)
@@ -85,8 +92,26 @@ export function scoreWater(player: PlayerState): number {
   if (blues.size === 0) return 0
   let best = 0
   const visited = new Set<HexId>()
+
+  /** Blue hexes still reachable from h, ignoring visited ones (h included). */
+  const reachable = (start: HexId): number => {
+    const seen = new Set<HexId>([start])
+    const stack = [start]
+    while (stack.length) {
+      for (const n of neighbors(stack.pop()!)) {
+        if (blues.has(n) && !visited.has(n) && !seen.has(n)) {
+          seen.add(n)
+          stack.push(n)
+        }
+      }
+    }
+    return seen.size
+  }
+
   const dfs = (h: HexId, len: number): void => {
     if (len > best) best = len
+    if (best === blues.size) return
+    if (len + reachable(h) - 1 <= best) return // can't beat best even taking everything
     for (const n of neighbors(h)) {
       if (blues.has(n) && !visited.has(n)) {
         visited.add(n)
@@ -95,7 +120,9 @@ export function scoreWater(player: PlayerState): number {
       }
     }
   }
+
   for (const start of blues) {
+    if (best === blues.size) break
     visited.add(start)
     dfs(start, 1)
     visited.delete(start)
