@@ -1,4 +1,5 @@
 <script lang="ts">
+  import WalletBadge from './WalletBadge.svelte'
   import { loadPlayerName, savePlayerName } from '../app/persist'
   import RulesLeaflet from './RulesLeaflet.svelte'
 
@@ -38,6 +39,7 @@
     <span class="ornament" aria-hidden="true">❦</span>
     <h1>Harmonies</h1>
     <p class="tagline">a field guide to little landscapes &amp; the animals who love them</p>
+    <WalletBadge />
   </div>
   <p class="disclaimer">
     A fan-made homage for playing among friends. Not affiliated with Libellud.

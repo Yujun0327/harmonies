@@ -1,5 +1,7 @@
 <script lang="ts">
-  import type { BaseSession } from '../app/session.svelte'
+  import PayoutLine from './PayoutLine.svelte'
+  import { OnlineSession } from '../app/session.svelte'
+import type { BaseSession } from '../app/session.svelte'
   import Modal from './Modal.svelte'
 
   interface Props {
@@ -9,6 +11,8 @@
   }
 
   const { session, onRematch, onExit }: Props = $props()
+
+  const online = $derived(session instanceof OnlineSession ? session : null)
 
   const result = $derived(session.state.result!)
   const rows = ['trees', 'mountains', 'fields', 'buildings', 'water', 'animalTotal'] as const
@@ -55,6 +59,7 @@
     </tbody>
   </table>
   <div class="actions">
+    <PayoutLine payout={online?.payout ?? null} lock={online?.lockState ?? null} />
     <button onclick={onRematch}>rematch</button>
     <button class="quiet" onclick={onExit}>leave</button>
   </div>
