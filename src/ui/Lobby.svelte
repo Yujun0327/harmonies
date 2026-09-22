@@ -46,9 +46,9 @@
     <p>This room already has 4 players. Ask for a fresh room code.</p>
   {:else}
     <p class="signal">
-      signal: {relays}/7 relays
+      signal: {relays}/{session.brokerCount()} brokers
       {#if relays === 0 && waitedLong}
-        — can't reach the signaling relays; check your network or firewall
+        — can't reach the game brokers; check your network or firewall
       {/if}
     </p>
 
